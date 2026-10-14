@@ -2,23 +2,27 @@
 
 #include "AutoPowerOff.h"
 #include "BleKeyboard.h"
+#include "HttpApi.h"
 #include "OtaUpdater.h"
 #include "StartupWatchdog.h"
 #include "UsbKeyboardHost.h"
+#include "VibrationMotor.h"
 #include "config.h"
 #include "secrets.h"
 
 static AutoPowerOff autoPowerOff(POWER_BUTTON_PIN, (uint32_t)IDLE_TIMEOUT_MIN * 60000UL, POWER_PULSE_HIGH_MS,
                                  POWER_PULSE_GAP_MS, POWER_PULSE_COUNT, POWER_OFF_VERIFY_MS);
 static OtaUpdater otaUpdater(WIFI_SSID, WIFI_PASSWORD, DEVICE_HOSTNAME, OTA_PASSWORD,
-                             (uint32_t)OTA_WINDOW_MIN * 60000UL);
+                             (uint32_t)OTA_WINDOW_MIN * 60000UL, KEEP_WIFI_ON);
 static BleKeyboard bleKeyboard(BLE_DEVICE_NAME, BLE_MANUFACTURER);
 static UsbKeyboardHost usbKeyboard(USB_NO_DEVICE_WARN_MS);
 static StartupWatchdog startupWatchdog(STARTUP_ENUM_TIMEOUT_MS, STARTUP_MAX_RESTARTS);
+static VibrationMotor vibrationMotor(VIBRATION_PIN, VIBRATION_MAX_PULSES, VIBRATION_MAX_ON_MS);
+static HttpApi httpApi(HTTP_API_PORT, vibrationMotor);
 
 /**
  * Bring up the power button pin first, wait for the supply to settle, then start BLE,
- * the USB host, its startup watchdog and the OTA window.
+ * the USB host, its startup watchdog, the vibration motor and the OTA window.
  *
  * @return void
  */
@@ -39,6 +43,7 @@ void setup() {
     delay(USB_HOST_START_DELAY_MS);
 
     autoPowerOff.begin();
+    vibrationMotor.begin();
     bleKeyboard.begin();
 
     usbKeyboard.setKeyboardHandler([](const uint8_t report[8]) {
@@ -53,17 +58,21 @@ void setup() {
     usbKeyboard.begin();
     startupWatchdog.begin();
 
+    httpApi.setActivityHandler([]() { autoPowerOff.notifyActivity(); });
+    httpApi.begin();
     otaUpdater.begin();
 }
 
 /**
- * Serve OTA during its window, report missing USB devices, watch the keyboard
- * enumeration after boot and run the idle power off.
+ * Serve OTA and the HTTP API, report missing USB devices, watch the keyboard
+ * enumeration after boot, advance the vibration pattern and run the idle power off.
  *
  * @return void
  */
 void loop() {
     otaUpdater.handle();
+    httpApi.handle();
+    vibrationMotor.update();
     usbKeyboard.poll();
     startupWatchdog.update(usbKeyboard.hasKeyboard(), otaUpdater.isUpdating());
     autoPowerOff.update(otaUpdater.isUpdating());

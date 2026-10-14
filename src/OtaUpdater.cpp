@@ -4,14 +4,20 @@
 #include <WiFi.h>
 
 OtaUpdater::OtaUpdater(const char* ssid, const char* password, const char* hostname, const char* otaPassword,
-                       uint32_t windowMs)
-    : _ssid(ssid), _password(password), _hostname(hostname), _otaPassword(otaPassword), _windowMs(windowMs) {}
+                       uint32_t windowMs, bool keepWifi)
+    : _ssid(ssid),
+      _password(password),
+      _hostname(hostname),
+      _otaPassword(otaPassword),
+      _windowMs(windowMs),
+      _keepWifi(keepWifi) {}
 
 void OtaUpdater::begin() {
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(_hostname);
     WiFi.setAutoReconnect(true);
-    Serial.printf("[OTA] WiFi enabled for %lu min, connecting...\n", (unsigned long)(_windowMs / 60000UL));
+    Serial.printf("[OTA] OTA window open for %lu min, connecting to WiFi...\n",
+                  (unsigned long)(_windowMs / 60000UL));
     WiFi.begin(_ssid, _password);
     _startMs = millis();
     _lastReconnectAttemptMs = _startMs;
@@ -26,8 +32,8 @@ void OtaUpdater::handle() {
     if (_otaStarted) {
         ArduinoOTA.handle();
     }
-    if (!_updating && millis() - _startMs >= _windowMs) {
-        shutdown();
+    if (!_updating && !_windowClosed && millis() - _startMs >= _windowMs) {
+        closeWindow();
     }
 }
 
@@ -80,7 +86,9 @@ void OtaUpdater::maintainWifi() {
             Serial.printf("[OTA] WiFi connected, IP address: %s\n", WiFi.localIP().toString().c_str());
             _wasConnected = true;
         }
-        startOta();
+        if (!_windowClosed) {
+            startOta();
+        }
         return;
     }
 
@@ -95,10 +103,15 @@ void OtaUpdater::maintainWifi() {
     }
 }
 
-void OtaUpdater::shutdown() {
+void OtaUpdater::closeWindow() {
     if (_otaStarted) {
         ArduinoOTA.end();
         _otaStarted = false;
+    }
+    _windowClosed = true;
+    if (_keepWifi) {
+        Serial.println("[OTA] OTA window closed, WiFi stays on for the HTTP API");
+        return;
     }
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);

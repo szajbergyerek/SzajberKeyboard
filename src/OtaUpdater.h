@@ -15,10 +15,11 @@ public:
      * @param password WiFi password.
      * @param hostname Device hostname, also used as the mDNS name.
      * @param otaPassword Password required for OTA uploads, empty to disable authentication.
-     * @param windowMs How long WiFi and OTA stay enabled after begin().
+     * @param windowMs How long OTA stays enabled after begin().
+     * @param keepWifi Keep the WiFi connection up after the OTA window, for the HTTP API.
      */
     OtaUpdater(const char* ssid, const char* password, const char* hostname, const char* otaPassword,
-               uint32_t windowMs);
+               uint32_t windowMs, bool keepWifi);
 
     /**
      * Start connecting to WiFi without blocking. OTA starts as soon as WiFi is up.
@@ -64,19 +65,22 @@ private:
     void maintainWifi();
 
     /**
-     * Stop ArduinoOTA and switch the WiFi radio off.
+     * Stop ArduinoOTA at the end of the window, and switch the WiFi radio off
+     * unless it has to stay up for the HTTP API.
      *
      * @return void
      */
-    void shutdown();
+    void closeWindow();
 
     const char* _ssid;
     const char* _password;
     const char* _hostname;
     const char* _otaPassword;
     uint32_t _windowMs;
+    bool _keepWifi;
     uint32_t _startMs = 0;
     bool _active = false;
+    bool _windowClosed = false;
     bool _otaStarted = false;
     bool _wasConnected = false;
     volatile bool _updating = false;

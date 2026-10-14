@@ -67,3 +67,29 @@
 #ifndef STARTUP_MAX_RESTARTS
 #define STARTUP_MAX_RESTARTS 3
 #endif
+
+// GPIO driving the vibration motor transistor (HIGH = motor on)
+#ifndef VIBRATION_PIN
+#define VIBRATION_PIN 7
+#endif
+
+// Largest pulse count accepted by the vibration API
+#ifndef VIBRATION_MAX_PULSES
+#define VIBRATION_MAX_PULSES 20
+#endif
+
+// Largest pulse and pause length accepted by the vibration API, in milliseconds
+#ifndef VIBRATION_MAX_ON_MS
+#define VIBRATION_MAX_ON_MS 5000
+#endif
+
+// TCP port of the HTTP API
+#ifndef HTTP_API_PORT
+#define HTTP_API_PORT 80
+#endif
+
+// Keep WiFi connected after the OTA window so the HTTP API stays reachable.
+// Set to 0 to save battery, then only OTA uses WiFi during the first minutes.
+#ifndef KEEP_WIFI_ON
+#define KEEP_WIFI_ON 1
+#endif

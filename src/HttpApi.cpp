@@ -18,6 +18,7 @@ void HttpApi::begin() {
     _server.on("/keymap.json", HTTP_GET, [this]() { handleKeymapGet(); });
     _server.on("/keymap.json", HTTP_POST, [this]() { handleKeymapPost(); });
     _server.on("/learn", [this]() { handleLearn(); });
+    _server.on("/restart", [this]() { handleRestart(); });
     _server.on("/", [this]() { handleRoot(); });
 }
 
@@ -82,7 +83,8 @@ void HttpApi::handleRoot() {
                  "Szajber Keyboard\n"
                  "GET /vibrate?times=2&on=1000&off=300\n"
                  "GET /stop\n"
-                 "GET /keymap\n");
+                 "GET /keymap\n"
+                 "GET /restart\n");
 }
 
 void HttpApi::handleKeymapPage() {
@@ -90,7 +92,7 @@ void HttpApi::handleKeymapPage() {
 }
 
 void HttpApi::handleKeymapGet() {
-    _server.send(200, "application/json", _remapper.toJson());
+    _server.send(200, "application/json", _remapper.toJson(true));
 }
 
 void HttpApi::handleKeymapPost() {
@@ -110,4 +112,13 @@ void HttpApi::handleLearn() {
     _remapper.setLearnMode(on);
     _server.send(200, "application/json",
                  on ? R"({"ok":true,"learn":true})" : R"({"ok":true,"learn":false})");
+}
+
+void HttpApi::handleRestart() {
+    _server.send(200, "application/json", R"({"ok":true,"restarting":true})");
+    _server.client().stop();
+    Serial.println("[API] Restart requested over HTTP");
+    Serial.flush();
+    delay(200);
+    ESP.restart();
 }

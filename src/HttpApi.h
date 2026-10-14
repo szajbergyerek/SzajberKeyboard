@@ -16,6 +16,7 @@
  *   GET  /keymap.json                      the stored rules
  *   POST /keymap.json                      replace the rules
  *   GET  /learn?on=1                       bypass the rules while capturing keys
+ *   GET  /restart                          reboot the board, which reopens the OTA window
  *   GET  /                                 short usage text
  */
 class HttpApi {
@@ -111,6 +112,13 @@ private:
      * @return void
      */
     void handleLearn();
+
+    /**
+     * Handle GET /restart, answering before the board reboots.
+     *
+     * @return void
+     */
+    void handleRestart();
 
     WebServer _server;
     VibrationMotor& _motor;

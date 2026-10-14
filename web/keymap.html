@@ -44,6 +44,7 @@ details[open] summary{margin-bottom:8px}
 <h1>Szájber Keyboard</h1>
 <div class="p">
 <div class="fl"><button id="lb">Tanuló mód</button><span class="st" id="ls">Állapot...</span></div>
+<p class="note" style="margin:8px 0 0">A lap bezárása után legkésőbb 2 perccel magától kikapcsol.</p>
 </div>
 <div class="p">
 <div class="lbl">Szabályok</div>
@@ -162,11 +163,13 @@ fetch("/keymap.json",{method:"POST",headers:{"Content-Type":"application/json"},
 body:JSON.stringify({rules:rules})}).then(function(r){return r.json();})
 .then(function(j){say(j.ok?"Mentve, "+j.count+" szabály.":"Mentés sikertelen: "+(j.error||"ismeretlen hiba"));})
 .catch(function(){say("Mentés sikertelen: nincs kapcsolat a billentyűzettel.");});};
-var learn=false;
+var learn=false,hb=0;
 function sl(v){fetch("/learn?on="+(v?1:0)).then(function(r){return r.json();})
 .then(function(j){learn=!!j.learn;
 E("ls").textContent=learn?"BE: az átírás most nem él":"KI: az átírás aktív";
-E("lb").className=learn?"pri":"";})
+E("lb").className=learn?"pri":"";
+if(learn&&!hb)hb=setInterval(function(){fetch("/learn?on=1");},30000);
+if(!learn&&hb){clearInterval(hb);hb=0;}})
 .catch(function(){E("ls").textContent="A tanuló mód állapota nem ismert.";});}
 E("lb").onclick=function(){sl(!learn);};
 function norm(a){var o=[],j,r,x;

@@ -92,6 +92,7 @@ void loop() {
     otaUpdater.handle();
     httpApi.handle();
     vibrationMotor.update();
+    keyRemapper.tick();
 
     bool bleConnected = bleKeyboard.isConnected();
     if (bleConnected && !bleWasConnected) {

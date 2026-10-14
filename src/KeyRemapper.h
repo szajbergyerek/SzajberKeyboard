@@ -35,6 +35,7 @@ public:
     using ActionHandler = std::function<void(const KeyRule& rule)>;
 
     static constexpr size_t MAX_RULES = 32;
+    static constexpr uint32_t LEARN_TIMEOUT_MS = 120000;
     static constexpr uint8_t MODIFIER_USAGE_FIRST = 224;
     static constexpr uint8_t MODIFIER_USAGE_LAST = 231;
 
@@ -64,12 +65,21 @@ public:
     void setActionHandler(ActionHandler handler);
 
     /**
-     * Switch the learn mode, which bypasses all rules.
+     * Switch the learn mode, which bypasses all rules. It is never stored, so a restart
+     * always comes up with the rules active, and it expires on its own after
+     * LEARN_TIMEOUT_MS unless the editor page keeps refreshing it.
      *
      * @param on True to bypass the rules.
      * @return void
      */
     void setLearnMode(bool on);
+
+    /**
+     * Switch the learn mode off once it has expired. Call from loop().
+     *
+     * @return void
+     */
+    void tick();
 
     /**
      * Check whether the rules are currently bypassed.
@@ -88,11 +98,12 @@ public:
     bool loadFromJson(const String& json, String& error);
 
     /**
-     * Serialize the current state for the editor page.
+     * Serialize the rules.
      *
-     * @return JSON document with the learn mode flag and the rules.
+     * @param includeLearn True to add the learn mode flag, which the stored file leaves out.
+     * @return JSON document.
      */
-    String toJson() const;
+    String toJson(bool includeLearn) const;
 
     /**
      * Number of rules currently active.
@@ -159,5 +170,6 @@ private:
     ActionHandler _actionHandler;
     uint8_t _previousKeys[8] = {0};
     volatile bool _learnMode = false;
+    uint32_t _learnSetMs = 0;
     bool _fsReady = false;
 };

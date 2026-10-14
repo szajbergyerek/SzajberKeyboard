@@ -146,7 +146,16 @@ const KeyRule* KeyRemapper::findRule(uint8_t mods, uint8_t key) const {
 
 void KeyRemapper::setLearnMode(bool on) {
     _learnMode = on;
+    _learnSetMs = millis();
     Serial.printf("[KEYMAP] Learn mode %s\n", on ? "on, rules bypassed" : "off");
+}
+
+void KeyRemapper::tick() {
+    if (!_learnMode || millis() - _learnSetMs < LEARN_TIMEOUT_MS) {
+        return;
+    }
+    _learnMode = false;
+    Serial.println("[KEYMAP] Learn mode expired, rules active again");
 }
 
 bool KeyRemapper::isLearnMode() const {
@@ -216,12 +225,16 @@ bool KeyRemapper::parse(const String& json, String& error) {
     return true;
 }
 
-String KeyRemapper::toJson() const {
+String KeyRemapper::toJson(bool includeLearn) const {
     String out;
     out.reserve(64 + _count * 96);
-    out += R"({"learn":)";
-    out += _learnMode ? "true" : "false";
-    out += R"(,"rules":[)";
+    out += "{";
+    if (includeLearn) {
+        out += R"("learn":)";
+        out += _learnMode ? "true" : "false";
+        out += ",";
+    }
+    out += R"("rules":[)";
     for (size_t i = 0; i < _count; i++) {
         char item[72];
         snprintf(item, sizeof(item), R"(%s{"mods":%u,"key":%u,"outMods":%u,"outKey":%u)", i ? "," : "",
@@ -260,7 +273,7 @@ bool KeyRemapper::save() const {
     if (!file) {
         return false;
     }
-    String json = toJson();
+    String json = toJson(false);
     size_t written = file.print(json);
     file.close();
     return written == json.length();

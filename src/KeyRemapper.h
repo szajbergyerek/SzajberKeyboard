@@ -6,7 +6,9 @@
 /**
  * One remapping rule. Modifiers are HID bitmasks (1 left Ctrl, 2 left Shift,
  * 4 left Alt, 8 left Win, 16 right Ctrl, 32 right Shift, 64 right Alt, 128 right Win),
- * keys are HID usage IDs of the keyboard page.
+ * keys are HID usage IDs of the keyboard page. A modifier key can be a trigger or an
+ * output on its own through its usage ID, 224 left Ctrl to 231 right Win, because the
+ * boot report carries modifiers in the bitmask instead of the key slots.
  * When url is set, pressing the trigger also fires an HTTP request.
  */
 struct KeyRule {
@@ -33,6 +35,8 @@ public:
     using ActionHandler = std::function<void(const KeyRule& rule)>;
 
     static constexpr size_t MAX_RULES = 32;
+    static constexpr uint8_t MODIFIER_USAGE_FIRST = 224;
+    static constexpr uint8_t MODIFIER_USAGE_LAST = 231;
 
     /**
      * Mount the filesystem and load the stored rules.
@@ -116,6 +120,25 @@ private:
      * @return true if the rules were accepted.
      */
     bool parse(const String& json, String& error);
+
+    /**
+     * Write the output of one rule into the report.
+     *
+     * @param rule The rule that matched.
+     * @param out Report being built.
+     * @param slot Key slot the output key goes into, negative when there is none free.
+     * @param modsReplaced Tracks whether a combination rule already replaced the modifiers.
+     * @return void
+     */
+    void applyOutput(const KeyRule& rule, uint8_t out[8], int slot, bool& modsReplaced) const;
+
+    /**
+     * Find a key slot that is still empty.
+     *
+     * @param out Report being built.
+     * @return The slot index, or -1 when all six slots are taken.
+     */
+    static int findFreeSlot(const uint8_t out[8]);
 
     /**
      * Write the rules to /keymap.json.

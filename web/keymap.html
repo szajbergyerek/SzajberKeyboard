@@ -83,10 +83,14 @@ L=("Enter 40 Escape 41 Backspace 42 Tab 43 Space 44 Minus 45 Equal 46 BracketLef
 +" ArrowDown 81 ArrowUp 82 NumLock 83 NumpadDivide 84 NumpadMultiply 85 NumpadSubtract 86 NumpadAdd 87"
 +" NumpadEnter 88 NumpadDecimal 99 ContextMenu 101").split(" ");
 for(i=0;i<L.length;i+=2)M[L[i]]=+L[i+1];
+var MI="ControlLeft ShiftLeft AltLeft MetaLeft ControlRight ShiftRight AltRight MetaRight".split(" ");
+for(i=0;i<8;i++)M[MI[i]]=224+i;
+M.OSLeft=227;M.OSRight=231;
 for(var k in M)R[M[k]]=k;
 var MN="Ctrl Shift Alt Win J-Ctrl J-Shift J-Alt J-Win".split(" ");
 function E(id){return document.getElementById(id);}
-function nm(c){var n=R[c];
+function nm(c){if(c>=224&&c<=231)return MN[c-224];
+var n=R[c];
 if(!n)return "#"+c;
 if(n.indexOf("Key")===0)return n.slice(3);
 if(n.indexOf("Digit")===0)return n.slice(5);
@@ -112,12 +116,17 @@ E("list").innerHTML=h||"<div class=st>Még nincs szabály.</div>";}
 E("list").onclick=function(e){var d=e.target.getAttribute("data-i");
 if(d===null)return;
 rules.splice(+d,1);draw();say("Szabály törölve. A mentés még hátravan.");};
-var cap={cf:{m:0,k:0},ct:{m:0,k:0}},sd={};
-function md(e){var m=0;
-if(e.ctrlKey)m+=sd.c?16:1;
-if(e.shiftKey)m+=sd.s?32:2;
-if(e.altKey)m+=sd.a?64:4;
-if(e.metaKey)m+=sd.w?128:8;
+var cap={cf:{m:0,k:0},ct:{m:0,k:0}},down={};
+window.addEventListener("keydown",function(e){if(M[e.code]>=224)down[M[e.code]]=1;},true);
+window.addEventListener("keyup",function(e){delete down[M[e.code]];},true);
+window.addEventListener("blur",function(){down={};});
+function md(e,self){var m=0,j;
+for(j=0;j<8;j++)if(down[224+j])m|=1<<j;
+if(e.ctrlKey&&!(m&17))m|=1;
+if(e.shiftKey&&!(m&34))m|=2;
+if(e.altKey&&!(m&68))m|=4;
+if(e.metaKey&&!(m&136))m|=8;
+if(self>=224&&self<=231)m&=~(1<<(self-224));
 return m;}
 function fill(id,pre){var o=cap[id];
 E(id).innerHTML=pre+"<b>"+(o.k||o.m?txt(o.m,o.k):"kattints, majd nyomd le")+"</b>";}
@@ -126,13 +135,8 @@ el.onclick=function(){el.focus();};
 el.onfocus=function(){el.className="cap on";};
 el.onblur=function(){el.className="cap";};
 el.onkeydown=function(e){e.preventDefault();
-var c=e.code,o=cap[id],r=e.location===2;
-if(c.indexOf("Control")===0)sd.c=r;
-else if(c.indexOf("Shift")===0)sd.s=r;
-else if(c.indexOf("Alt")===0)sd.a=r;
-else if(c.indexOf("Meta")===0||c.indexOf("OS")===0)sd.w=r;
-else o.k=M[c]||0;
-o.m=md(e);fill(id,pre);};
+var o=cap[id],c=M[e.code]||0;
+o.k=c;o.m=md(e,c);fill(id,pre);};
 fill(id,pre);}
 bind("cf","Miből");bind("ct","Mire");
 function hup(){var u=E("u").value.trim();

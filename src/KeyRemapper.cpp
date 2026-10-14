@@ -55,6 +55,25 @@ void KeyRemapper::apply(const uint8_t in[8], uint8_t out[8]) {
     }
 
     bool modsReplaced = false;
+
+    // Modifier keys never reach the key slots, so they are matched by their own usage ID
+    for (uint8_t bit = 0; bit < 8; bit++) {
+        uint8_t mask = (uint8_t)(1 << bit);
+        if ((source[0] & mask) == 0) {
+            continue;
+        }
+        uint8_t usage = (uint8_t)(MODIFIER_USAGE_FIRST + bit);
+        const KeyRule* rule = findRule((uint8_t)(source[0] & ~mask), usage);
+        if (rule == nullptr) {
+            continue;
+        }
+        if ((_previousKeys[0] & mask) == 0 && rule->url.length() > 0 && _actionHandler) {
+            _actionHandler(*rule);
+        }
+        out[0] &= (uint8_t)~mask;
+        applyOutput(*rule, out, findFreeSlot(out), modsReplaced);
+    }
+
     for (uint8_t slot = 2; slot < 8; slot++) {
         uint8_t key = source[slot];
         if (key == 0) {
@@ -72,15 +91,39 @@ void KeyRemapper::apply(const uint8_t in[8], uint8_t out[8]) {
             _actionHandler(*rule);
         }
 
-        out[slot] = rule->outKey;
-        if (rule->mods == 0) {
-            out[0] |= rule->outMods;
-        } else if (!modsReplaced) {
-            out[0] = rule->outMods;
-            modsReplaced = true;
-        }
+        applyOutput(*rule, out, slot, modsReplaced);
     }
     memcpy(_previousKeys, source, 8);
+}
+
+void KeyRemapper::applyOutput(const KeyRule& rule, uint8_t out[8], int slot, bool& modsReplaced) const {
+    if (rule.mods == 0) {
+        out[0] |= rule.outMods;
+    } else if (!modsReplaced) {
+        out[0] = rule.outMods;
+        modsReplaced = true;
+    }
+
+    // A modifier output belongs in the bitmask, hosts ignore it in the key slots
+    if (rule.outKey >= MODIFIER_USAGE_FIRST && rule.outKey <= MODIFIER_USAGE_LAST) {
+        out[0] |= (uint8_t)(1 << (rule.outKey - MODIFIER_USAGE_FIRST));
+        if (slot >= 0) {
+            out[slot] = 0;
+        }
+        return;
+    }
+    if (slot >= 0) {
+        out[slot] = rule.outKey;
+    }
+}
+
+int KeyRemapper::findFreeSlot(const uint8_t out[8]) {
+    for (int slot = 2; slot < 8; slot++) {
+        if (out[slot] == 0) {
+            return slot;
+        }
+    }
+    return -1;
 }
 
 void KeyRemapper::setActionHandler(ActionHandler handler) {

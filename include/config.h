@@ -7,9 +7,9 @@
 #define IDLE_TIMEOUT_MIN 15
 #endif
 
-// Minutes after boot during which WiFi and ArduinoOTA stay enabled
+// Minutes after boot during which ArduinoOTA stays enabled
 #ifndef OTA_WINDOW_MIN
-#define OTA_WINDOW_MIN 3
+#define OTA_WINDOW_MIN 1
 #endif
 
 // GPIO driving the transistor that "presses" the power module button (HIGH = pressed)

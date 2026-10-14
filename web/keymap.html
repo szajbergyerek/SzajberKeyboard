@@ -28,6 +28,15 @@ button:active{box-shadow:var(--in)}
 .ar{text-align:center;color:var(--mut);font-size:13px}
 label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--mut);margin:10px 0}
 #ab,#sb{width:100%}
+.inp,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:0;border-radius:10px;box-shadow:var(--in);padding:10px 12px;width:100%;margin-bottom:8px;outline:0;-webkit-appearance:none;appearance:none}
+textarea{resize:vertical;min-height:54px}
+:disabled{opacity:.4}
+details{box-shadow:var(--in);border-radius:10px;padding:10px 12px;margin:10px 0}
+summary{cursor:pointer;color:var(--acc);font-size:14px}
+details[open] summary{margin-bottom:8px}
+.note{font-size:12px;color:var(--mut);margin:0 0 10px}
+.tag{display:inline-block;font-size:11px;font-weight:600;color:var(--bg);background:var(--acc);border-radius:6px;padding:1px 6px;margin-right:7px}
+.sub{display:block;font-size:12px;color:var(--mut);margin-top:4px;word-break:break-all}
 </style>
 </head>
 <body>
@@ -46,6 +55,14 @@ label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--mut);ma
 <div class="ar">lesz belőle</div>
 <div class="cap" id="ct" tabindex="0">Mire<b>kattints, majd nyomd le</b></div>
 <label><input type="checkbox" id="dis"> Letiltás: a billentyű ne csináljon semmit</label>
+<details>
+<summary>HTTP hívás (opcionális)</summary>
+<p class="note">Ha megadsz URL-t, a billentyű parancsgomb lesz: lenyomásra a billentyűzet meghívja az URL-t, és a billentyű alapértelmezésben <b>nem megy tovább a géphez</b>. Ha az eredeti funkcióját is meg akarod tartani, a Mire mezőbe vedd fel ugyanazt a billentyűt.</p>
+<input class="inp" id="u" type="url" inputmode="url" placeholder="URL, pl. http://10.20.30.45:8123/api/webhook/lampa">
+<select id="me"><option value="GET">GET</option><option value="POST">POST</option></select>
+<input class="inp" id="he" type="text" placeholder="Fejléc, pl. Authorization: Bearer abc123">
+<textarea id="bo" placeholder="Törzs, csak POST esetén, pl. {}"></textarea>
+</details>
 <button class="pri" id="ab">Hozzáadás</button>
 </div>
 <div class="p">
@@ -79,11 +96,17 @@ function txt(m,c){var a=[],j;
 for(j=0;j<8;j++)if(m&(1<<j))a.push(MN[j]);
 if(c)a.push(nm(c));
 return a.length?a.join(" + "):"Letiltva";}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function shrt(u){var s=String(u).replace("http://","").replace("https://","");
+return s.length>40?s.slice(0,39)+"…":s;}
 function say(s){E("msg").textContent=s;}
 var rules=[];
-function draw(){var h="",j,r;
+function draw(){var h="",j,r,o;
 for(j=0;j<rules.length;j++){r=rules[j];
-h+="<div class=row><span>"+txt(r.mods,r.key)+"  &rarr;  "+txt(r.outMods,r.outKey)
+o=(r.outMods||r.outKey)?txt(r.outMods,r.outKey):(r.url?"csak parancs":"Letiltva");
+h+="<div class=row><span>"+(r.url?"<span class=tag>HTTP</span>":"")
++txt(r.mods,r.key)+"  &rarr;  "+o
++(r.url?"<span class=sub>"+esc((r.method||"GET")+" "+shrt(r.url))+"</span>":"")
 +"</span><button class=del data-i="+j+">Törlés</button></div>";}
 E("list").innerHTML=h||"<div class=st>Még nincs szabály.</div>";}
 E("list").onclick=function(e){var d=e.target.getAttribute("data-i");
@@ -112,11 +135,22 @@ else o.k=M[c]||0;
 o.m=md(e);fill(id,pre);};
 fill(id,pre);}
 bind("cf","Miből");bind("ct","Mire");
-E("ab").onclick=function(){var f=cap.cf,t=cap.ct,d=E("dis").checked;
+function hup(){var u=E("u").value.trim();
+E("me").disabled=!u;E("he").disabled=!u;
+E("bo").disabled=!u;
+E("bo").style.display=(u&&E("me").value==="POST")?"":"none";}
+E("u").oninput=hup;E("me").onchange=hup;hup();
+E("ab").onclick=function(){var f=cap.cf,t=cap.ct,d=E("dis").checked,
+u=E("u").value.trim(),r,h,b;
 if(!f.k){say("Nyomd le a Miből mező billentyűjét.");return;}
-if(!d&&!t.k){say("Nyomd le a Mire mező billentyűjét, vagy jelöld a letiltást.");return;}
-rules.push({mods:f.m,key:f.k,outMods:d?0:t.m,outKey:d?0:t.k});
+if(!d&&!u&&!t.k){say("Nyomd le a Mire mező billentyűjét, vagy adj meg URL-t, vagy jelöld a letiltást.");return;}
+r={mods:f.m,key:f.k,outMods:d?0:t.m,outKey:d?0:t.k};
+if(u){r.url=u;r.method=E("me").value;
+h=E("he").value.trim();if(h)r.header=h;
+b=E("bo").value;if(r.method==="POST"&&b)r.body=b;}
+rules.push(r);
 cap.cf={m:0,k:0};cap.ct={m:0,k:0};E("dis").checked=false;
+E("u").value="";E("he").value="";E("bo").value="";E("me").value="GET";hup();
 fill("cf","Miből");fill("ct","Mire");draw();
 say("Szabály hozzáadva. A mentés még hátravan.");};
 E("sb").onclick=function(){say("Mentés...");
@@ -131,8 +165,17 @@ E("ls").textContent=learn?"BE: az átírás most nem él":"KI: az átírás akt�
 E("lb").className=learn?"pri":"";})
 .catch(function(){E("ls").textContent="A tanuló mód állapota nem ismert.";});}
 E("lb").onclick=function(){sl(!learn);};
+function norm(a){var o=[],j,r,x;
+for(j=0;j<(a||[]).length;j++){r=a[j]||{};
+x={mods:+r.mods||0,key:+r.key||0,outMods:+r.outMods||0,outKey:+r.outKey||0};
+if(r.url){x.url=String(r.url);
+x.method=String(r.method||"GET").toUpperCase()==="POST"?"POST":"GET";
+if(r.header)x.header=String(r.header);
+if(r.body&&x.method==="POST")x.body=String(r.body);}
+o.push(x);}
+return o;}
 fetch("/keymap.json").then(function(r){return r.json();})
-.then(function(j){rules=j.rules||[];draw();say(rules.length+" szabály betöltve.");})
+.then(function(j){rules=norm(j.rules);draw();say(rules.length+" szabály betöltve.");})
 .catch(function(){draw();say("A szabályok betöltése nem sikerült.");});
 sl(true);
 window.addEventListener("beforeunload",function(){fetch("/learn?on=0",{keepalive:true});});

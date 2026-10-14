@@ -8,6 +8,7 @@
 #include "StartupWatchdog.h"
 #include "UsbKeyboardHost.h"
 #include "VibrationMotor.h"
+#include "WebhookSender.h"
 #include "config.h"
 #include "secrets.h"
 
@@ -21,6 +22,7 @@ static UsbKeyboardHost usbKeyboard(USB_NO_DEVICE_WARN_MS);
 static StartupWatchdog startupWatchdog(STARTUP_ENUM_TIMEOUT_MS, STARTUP_MAX_RESTARTS);
 static VibrationMotor vibrationMotor(VIBRATION_PIN, VIBRATION_MAX_PULSES, VIBRATION_MAX_ON_MS);
 static KeyRemapper keyRemapper;
+static WebhookSender webhookSender;
 static HttpApi httpApi(HTTP_API_PORT, vibrationMotor, keyRemapper);
 
 // Previous BLE state, so the connect vibration is triggered from loop() and the
@@ -29,8 +31,8 @@ static bool bleWasConnected = false;
 
 /**
  * Bring up the power button pin first, wait for the supply to settle, then start BLE,
- * the USB host, its startup watchdog, the vibration motor, the key remapper and the
- * OTA window.
+ * the USB host, its startup watchdog, the vibration motor, the webhook sender,
+ * the key remapper and the OTA window.
  *
  * @return void
  */
@@ -54,7 +56,10 @@ void setup() {
     autoPowerOff.setWarningHandler(
         []() { vibrationMotor.play(VIBRATE_WARNING_PULSES, VIBRATE_WARNING_ON_MS, VIBRATE_WARNING_OFF_MS); });
     vibrationMotor.begin();
+    webhookSender.begin();
     keyRemapper.begin();
+    keyRemapper.setActionHandler(
+        [](const KeyRule& rule) { webhookSender.send(rule.method, rule.url, rule.header, rule.body); });
     bleKeyboard.begin();
 
     usbKeyboard.setKeyboardHandler([](const uint8_t report[8]) {

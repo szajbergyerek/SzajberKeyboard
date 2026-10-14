@@ -51,3 +51,19 @@
 #ifndef USB_NO_DEVICE_WARN_MS
 #define USB_NO_DEVICE_WARN_MS 10000
 #endif
+
+// Delay at the start of setup() so the power module output can rise to 5 V
+// and the keyboard can boot before the USB host is started
+#ifndef USB_HOST_START_DELAY_MS
+#define USB_HOST_START_DELAY_MS 1500
+#endif
+
+// Time allowed after the USB host start for the keyboard to enumerate
+#ifndef STARTUP_ENUM_TIMEOUT_MS
+#define STARTUP_ENUM_TIMEOUT_MS 5000
+#endif
+
+// Maximum number of automatic restarts while waiting for the keyboard
+#ifndef STARTUP_MAX_RESTARTS
+#define STARTUP_MAX_RESTARTS 3
+#endif

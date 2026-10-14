@@ -64,6 +64,13 @@ public:
      */
     void poll();
 
+    /**
+     * Check whether an enumerated HID keyboard interface is currently active.
+     *
+     * @return true when the keyboard is connected and its reports are being read.
+     */
+    bool hasKeyboard() const;
+
 private:
     enum class InterfaceKind : uint8_t { BootKeyboard, ReportProtocol };
 

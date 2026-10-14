@@ -75,6 +75,10 @@ void UsbKeyboardHost::poll() {
     }
 }
 
+bool UsbKeyboardHost::hasKeyboard() const {
+    return _device != nullptr && _interfaceCount > 0;
+}
+
 void UsbKeyboardHost::libraryTask(void* arg) {
     (void)arg;
     while (true) {
@@ -155,6 +159,8 @@ void UsbKeyboardHost::openDevice(uint8_t address) {
     if (err != ESP_OK) {
         Serial.printf("[USB] Failed to open USB device: %s\n", esp_err_to_name(err));
         _device = nullptr;
+        _deviceAttached = false;
+        _noDeviceSinceMs = millis();
         return;
     }
 
@@ -166,6 +172,8 @@ void UsbKeyboardHost::openDevice(uint8_t address) {
         Serial.println("[USB] Failed to read USB device descriptors");
         usb_host_device_close(_client, _device);
         _device = nullptr;
+        _deviceAttached = false;
+        _noDeviceSinceMs = millis();
         return;
     }
     _maxPacketSize0 = deviceDesc->bMaxPacketSize0;
@@ -215,6 +223,9 @@ void UsbKeyboardHost::openDevice(uint8_t address) {
                   product.length() ? ", " : "", product.c_str(), (unsigned int)_interfaceCount);
     if (_interfaceCount == 0) {
         Serial.println("[USB] No usable keyboard interface found on this device");
+        _deviceAttached = false;
+        _noDeviceWarned = false;
+        _noDeviceSinceMs = millis();
     }
     sendLeds();
 }

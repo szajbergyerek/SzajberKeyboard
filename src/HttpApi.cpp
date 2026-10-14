@@ -2,15 +2,22 @@
 
 #include <WiFi.h>
 
+#include "KeymapPage.h"
+
 static constexpr uint16_t DEFAULT_PULSES = 1;
 static constexpr uint16_t DEFAULT_ON_MS = 200;
 static constexpr uint16_t DEFAULT_OFF_MS = 200;
 
-HttpApi::HttpApi(uint16_t port, VibrationMotor& motor) : _server(port), _motor(motor) {}
+HttpApi::HttpApi(uint16_t port, VibrationMotor& motor, KeyRemapper& remapper)
+    : _server(port), _motor(motor), _remapper(remapper) {}
 
 void HttpApi::begin() {
     _server.on("/vibrate", [this]() { handleVibrate(); });
     _server.on("/stop", [this]() { handleStop(); });
+    _server.on("/keymap", [this]() { handleKeymapPage(); });
+    _server.on("/keymap.json", HTTP_GET, [this]() { handleKeymapGet(); });
+    _server.on("/keymap.json", HTTP_POST, [this]() { handleKeymapPost(); });
+    _server.on("/learn", [this]() { handleLearn(); });
     _server.on("/", [this]() { handleRoot(); });
 }
 
@@ -74,5 +81,33 @@ void HttpApi::handleRoot() {
     _server.send(200, "text/plain",
                  "Szajber Keyboard\n"
                  "GET /vibrate?times=2&on=1000&off=300\n"
-                 "GET /stop\n");
+                 "GET /stop\n"
+                 "GET /keymap\n");
+}
+
+void HttpApi::handleKeymapPage() {
+    _server.send_P(200, "text/html", KEYMAP_PAGE);
+}
+
+void HttpApi::handleKeymapGet() {
+    _server.send(200, "application/json", _remapper.toJson());
+}
+
+void HttpApi::handleKeymapPost() {
+    String body = _server.arg("plain");
+    String error;
+    if (!_remapper.loadFromJson(body, error)) {
+        _server.send(400, "application/json", String(R"({"ok":false,"error":")") + error + R"("})");
+        return;
+    }
+    char response[48];
+    snprintf(response, sizeof(response), R"({"ok":true,"count":%u})", (unsigned int)_remapper.ruleCount());
+    _server.send(200, "application/json", response);
+}
+
+void HttpApi::handleLearn() {
+    bool on = argValue("on", 0) != 0;
+    _remapper.setLearnMode(on);
+    _server.send(200, "application/json",
+                 on ? R"({"ok":true,"learn":true})" : R"({"ok":true,"learn":false})");
 }

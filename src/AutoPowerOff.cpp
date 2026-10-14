@@ -1,13 +1,14 @@
 #include "AutoPowerOff.h"
 
 AutoPowerOff::AutoPowerOff(uint8_t pin, uint32_t idleTimeoutMs, uint16_t pulseHighMs, uint16_t pulseGapMs,
-                           uint8_t pulseCount, uint32_t verifyDelayMs)
+                           uint8_t pulseCount, uint32_t verifyDelayMs, uint32_t warningLeadMs)
     : _pin(pin),
       _idleTimeoutMs(idleTimeoutMs),
       _pulseHighMs(pulseHighMs),
       _pulseGapMs(pulseGapMs),
       _pulseCount(pulseCount),
-      _verifyDelayMs(verifyDelayMs) {}
+      _verifyDelayMs(verifyDelayMs),
+      _warningLeadMs(warningLeadMs) {}
 
 void AutoPowerOff::begin() {
     digitalWrite(_pin, LOW);
@@ -20,6 +21,11 @@ void AutoPowerOff::begin() {
 
 void AutoPowerOff::notifyActivity() {
     _lastActivityMs = millis();
+    _warned = false;
+}
+
+void AutoPowerOff::setWarningHandler(WarningHandler handler) {
+    _warningHandler = handler;
 }
 
 void AutoPowerOff::update(bool inhibit) {
@@ -31,16 +37,29 @@ void AutoPowerOff::update(bool inhibit) {
                           (unsigned long)_verifyDelayMs);
             _waitingForPowerDown = false;
             _lastActivityMs = now;
+            _warned = false;
         }
         return;
     }
 
     if (inhibit) {
         _lastActivityMs = now;
+        _warned = false;
         return;
     }
 
-    if (now - _lastActivityMs >= _idleTimeoutMs) {
+    uint32_t idleMs = now - _lastActivityMs;
+    if (!_warned && _warningLeadMs > 0 && _warningLeadMs < _idleTimeoutMs &&
+        idleMs >= _idleTimeoutMs - _warningLeadMs) {
+        _warned = true;
+        Serial.printf("[POWER] Power off in %lu s unless a key is pressed\n",
+                      (unsigned long)(_warningLeadMs / 1000UL));
+        if (_warningHandler) {
+            _warningHandler();
+        }
+    }
+
+    if (idleMs >= _idleTimeoutMs) {
         Serial.printf("[POWER] No key press for %lu min, requesting power off\n",
                       (unsigned long)(_idleTimeoutMs / 60000UL));
         Serial.flush();

@@ -4,14 +4,19 @@
 #include <WebServer.h>
 #include <functional>
 
+#include "KeyRemapper.h"
 #include "VibrationMotor.h"
 
 /**
  * Small HTTP API that triggers the vibration motor.
  * The server is started as soon as WiFi is up and serves:
- *   GET /vibrate?times=2&on=1000&off=300  start a pattern
- *   GET /stop                             stop the motor
- *   GET /                                 short usage text
+ *   GET  /vibrate?times=2&on=1000&off=300  start a pattern
+ *   GET  /stop                             stop the motor
+ *   GET  /keymap                           the key remapping editor page
+ *   GET  /keymap.json                      the stored rules
+ *   POST /keymap.json                      replace the rules
+ *   GET  /learn?on=1                       bypass the rules while capturing keys
+ *   GET  /                                 short usage text
  */
 class HttpApi {
 public:
@@ -22,8 +27,9 @@ public:
      *
      * @param port TCP port to listen on.
      * @param motor Motor driver the endpoints control.
+     * @param remapper Key remapper the editor endpoints configure.
      */
-    HttpApi(uint16_t port, VibrationMotor& motor);
+    HttpApi(uint16_t port, VibrationMotor& motor, KeyRemapper& remapper);
 
     /**
      * Register the request handlers. The socket is opened later, once WiFi is connected.
@@ -78,8 +84,37 @@ private:
      */
     void handleRoot();
 
+    /**
+     * Handle GET /keymap, the editor page.
+     *
+     * @return void
+     */
+    void handleKeymapPage();
+
+    /**
+     * Handle GET /keymap.json.
+     *
+     * @return void
+     */
+    void handleKeymapGet();
+
+    /**
+     * Handle POST /keymap.json.
+     *
+     * @return void
+     */
+    void handleKeymapPost();
+
+    /**
+     * Handle GET /learn.
+     *
+     * @return void
+     */
+    void handleLearn();
+
     WebServer _server;
     VibrationMotor& _motor;
+    KeyRemapper& _remapper;
     ActivityHandler _activityHandler;
     bool _started = false;
 };

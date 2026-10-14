@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <functional>
 
 /**
  * Switches the battery power module off after a period without key presses
@@ -8,6 +9,8 @@
  */
 class AutoPowerOff {
 public:
+    using WarningHandler = std::function<void()>;
+
     /**
      * Create the power off controller.
      *
@@ -17,9 +20,10 @@ public:
      * @param pulseGapMs Pause between two simulated button presses.
      * @param pulseCount Number of simulated button presses.
      * @param verifyDelayMs Time to wait before assuming the power off failed.
+     * @param warningLeadMs How long before the power off the warning handler is called, 0 disables it.
      */
     AutoPowerOff(uint8_t pin, uint32_t idleTimeoutMs, uint16_t pulseHighMs, uint16_t pulseGapMs,
-                 uint8_t pulseCount, uint32_t verifyDelayMs);
+                 uint8_t pulseCount, uint32_t verifyDelayMs, uint32_t warningLeadMs);
 
     /**
      * Drive the button pin LOW (released) and start the idle timer.
@@ -34,6 +38,14 @@ public:
      * @return void
      */
     void notifyActivity();
+
+    /**
+     * Set the handler called once, shortly before the power off request.
+     *
+     * @param handler Called from update(), typically to play a warning vibration.
+     * @return void
+     */
+    void setWarningHandler(WarningHandler handler);
 
     /**
      * Check the idle timer and issue or verify the power off request. Call from loop().
@@ -57,6 +69,9 @@ private:
     uint16_t _pulseGapMs;
     uint8_t _pulseCount;
     uint32_t _verifyDelayMs;
+    uint32_t _warningLeadMs;
+    WarningHandler _warningHandler;
+    volatile bool _warned = false;
     volatile uint32_t _lastActivityMs = 0;
     bool _waitingForPowerDown = false;
     uint32_t _powerOffRequestMs = 0;

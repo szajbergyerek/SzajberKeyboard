@@ -93,3 +93,24 @@
 #ifndef KEEP_WIFI_ON
 #define KEEP_WIFI_ON 1
 #endif
+
+// Length of the single vibration played when a BLE host connects, in milliseconds
+#ifndef VIBRATE_CONNECT_MS
+#define VIBRATE_CONNECT_MS 150
+#endif
+
+// How long before the automatic power off the warning vibration is played
+#ifndef POWER_WARNING_LEAD_MS
+#define POWER_WARNING_LEAD_MS 60000
+#endif
+
+// Warning vibration pattern played before the automatic power off
+#ifndef VIBRATE_WARNING_PULSES
+#define VIBRATE_WARNING_PULSES 2
+#endif
+#ifndef VIBRATE_WARNING_ON_MS
+#define VIBRATE_WARNING_ON_MS 150
+#endif
+#ifndef VIBRATE_WARNING_OFF_MS
+#define VIBRATE_WARNING_OFF_MS 200
+#endif

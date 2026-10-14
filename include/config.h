@@ -101,16 +101,24 @@
 
 // How long before the automatic power off the warning vibration is played
 #ifndef POWER_WARNING_LEAD_MS
-#define POWER_WARNING_LEAD_MS 60000
+#define POWER_WARNING_LEAD_MS 30000
 #endif
 
 // Warning vibration pattern played before the automatic power off
 #ifndef VIBRATE_WARNING_PULSES
-#define VIBRATE_WARNING_PULSES 2
+#define VIBRATE_WARNING_PULSES 5
 #endif
 #ifndef VIBRATE_WARNING_ON_MS
-#define VIBRATE_WARNING_ON_MS 150
+#define VIBRATE_WARNING_ON_MS 80
 #endif
 #ifndef VIBRATE_WARNING_OFF_MS
-#define VIBRATE_WARNING_OFF_MS 200
+#define VIBRATE_WARNING_OFF_MS 80
+#endif
+
+// Range accepted for the idle timeout when set from the web config page
+#ifndef IDLE_TIMEOUT_MIN_MIN
+#define IDLE_TIMEOUT_MIN_MIN 1
+#endif
+#ifndef IDLE_TIMEOUT_MIN_MAX
+#define IDLE_TIMEOUT_MIN_MAX 180
 #endif

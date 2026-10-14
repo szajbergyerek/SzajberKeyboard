@@ -2,6 +2,7 @@
 
 #include "AutoPowerOff.h"
 #include "BleKeyboard.h"
+#include "DeviceSettings.h"
 #include "HttpApi.h"
 #include "KeyRemapper.h"
 #include "OtaUpdater.h"
@@ -12,6 +13,7 @@
 #include "config.h"
 #include "secrets.h"
 
+static DeviceSettings deviceSettings(IDLE_TIMEOUT_MIN, IDLE_TIMEOUT_MIN_MIN, IDLE_TIMEOUT_MIN_MAX);
 static AutoPowerOff autoPowerOff(POWER_BUTTON_PIN, (uint32_t)IDLE_TIMEOUT_MIN * 60000UL, POWER_PULSE_HIGH_MS,
                                  POWER_PULSE_GAP_MS, POWER_PULSE_COUNT, POWER_OFF_VERIFY_MS,
                                  POWER_WARNING_LEAD_MS);
@@ -23,16 +25,16 @@ static StartupWatchdog startupWatchdog(STARTUP_ENUM_TIMEOUT_MS, STARTUP_MAX_REST
 static VibrationMotor vibrationMotor(VIBRATION_PIN, VIBRATION_MAX_PULSES, VIBRATION_MAX_ON_MS);
 static KeyRemapper keyRemapper;
 static WebhookSender webhookSender;
-static HttpApi httpApi(HTTP_API_PORT, vibrationMotor, keyRemapper);
+static HttpApi httpApi(HTTP_API_PORT, vibrationMotor, keyRemapper, deviceSettings);
 
 // Previous BLE state, so the connect vibration is triggered from loop() and the
 // NimBLE callback never touches the motor state machine from another task
 static bool bleWasConnected = false;
 
 /**
- * Bring up the power button pin first, wait for the supply to settle, then start BLE,
- * the USB host, its startup watchdog, the vibration motor, the webhook sender,
- * the key remapper and the OTA window.
+ * Bring up the power button pin first, wait for the supply to settle, then load the
+ * stored settings and start BLE, the USB host, its startup watchdog, the vibration
+ * motor, the webhook sender, the key remapper and the OTA window.
  *
  * @return void
  */
@@ -52,7 +54,11 @@ void setup() {
     Serial.printf("[MAIN] Waiting %u ms for the supply and the keyboard\n", (unsigned int)USB_HOST_START_DELAY_MS);
     delay(USB_HOST_START_DELAY_MS);
 
+    deviceSettings.begin();
+    deviceSettings.setChangeHandler([](uint32_t idleTimeoutMs) { autoPowerOff.setIdleTimeoutMs(idleTimeoutMs); });
+
     autoPowerOff.begin();
+    autoPowerOff.setIdleTimeoutMs(deviceSettings.idleTimeoutMs());
     autoPowerOff.setWarningHandler(
         []() { vibrationMotor.play(VIBRATE_WARNING_PULSES, VIBRATE_WARNING_ON_MS, VIBRATE_WARNING_OFF_MS); });
     vibrationMotor.begin();

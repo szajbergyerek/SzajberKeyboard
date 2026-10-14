@@ -40,6 +40,14 @@ public:
     void notifyActivity();
 
     /**
+     * Change the idle timeout while running, for example from a config page.
+     *
+     * @param idleTimeoutMs New idle timeout in milliseconds.
+     * @return void
+     */
+    void setIdleTimeoutMs(uint32_t idleTimeoutMs);
+
+    /**
      * Set the handler called once, shortly before the power off request.
      *
      * @param handler Called from update(), typically to play a warning vibration.

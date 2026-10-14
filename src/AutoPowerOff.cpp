@@ -28,6 +28,12 @@ void AutoPowerOff::setWarningHandler(WarningHandler handler) {
     _warningHandler = handler;
 }
 
+void AutoPowerOff::setIdleTimeoutMs(uint32_t idleTimeoutMs) {
+    _idleTimeoutMs = idleTimeoutMs;
+    _warned = false;
+    Serial.printf("[POWER] Idle timeout set to %lu min\n", (unsigned long)(idleTimeoutMs / 60000UL));
+}
+
 void AutoPowerOff::update(bool inhibit) {
     uint32_t now = millis();
 

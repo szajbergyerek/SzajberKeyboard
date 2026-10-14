@@ -8,8 +8,8 @@ static constexpr uint16_t DEFAULT_PULSES = 1;
 static constexpr uint16_t DEFAULT_ON_MS = 200;
 static constexpr uint16_t DEFAULT_OFF_MS = 200;
 
-HttpApi::HttpApi(uint16_t port, VibrationMotor& motor, KeyRemapper& remapper)
-    : _server(port), _motor(motor), _remapper(remapper) {}
+HttpApi::HttpApi(uint16_t port, VibrationMotor& motor, KeyRemapper& remapper, DeviceSettings& settings)
+    : _server(port), _motor(motor), _remapper(remapper), _settings(settings) {}
 
 void HttpApi::begin() {
     _server.on("/vibrate", [this]() { handleVibrate(); });
@@ -19,6 +19,8 @@ void HttpApi::begin() {
     _server.on("/keymap.json", HTTP_POST, [this]() { handleKeymapPost(); });
     _server.on("/learn", [this]() { handleLearn(); });
     _server.on("/restart", [this]() { handleRestart(); });
+    _server.on("/config.json", HTTP_GET, [this]() { handleConfigGet(); });
+    _server.on("/config.json", HTTP_POST, [this]() { handleConfigPost(); });
     _server.on("/", [this]() { handleRoot(); });
 }
 
@@ -84,7 +86,38 @@ void HttpApi::handleRoot() {
                  "GET /vibrate?times=2&on=1000&off=300\n"
                  "GET /stop\n"
                  "GET /keymap\n"
-                 "GET /restart\n");
+                 "GET /restart\n"
+                 "GET /config.json\n");
+}
+
+void HttpApi::handleConfigGet() {
+    _server.send(200, "application/json", _settings.toJson());
+}
+
+void HttpApi::handleConfigPost() {
+    String body = _server.arg("plain");
+    int key = body.indexOf("idleTimeoutMin");
+    if (key < 0) {
+        _server.send(400, "application/json", R"({"ok":false,"error":"missing idleTimeoutMin"})");
+        return;
+    }
+    int colon = body.indexOf(':', key);
+    if (colon < 0) {
+        _server.send(400, "application/json", R"({"ok":false,"error":"malformed request"})");
+        return;
+    }
+    long minutes = body.substring(colon + 1).toInt();
+    if (minutes <= 0 || minutes > 65535) {
+        _server.send(400, "application/json", R"({"ok":false,"error":"value out of range"})");
+        return;
+    }
+
+    String error;
+    if (!_settings.setIdleTimeoutMin((uint16_t)minutes, error)) {
+        _server.send(400, "application/json", String(R"({"ok":false,"error":")") + error + R"("})");
+        return;
+    }
+    _server.send(200, "application/json", String(R"({"ok":true,)") + _settings.toJson().substring(1));
 }
 
 void HttpApi::handleKeymapPage() {

@@ -4,6 +4,7 @@
 #include <WebServer.h>
 #include <functional>
 
+#include "DeviceSettings.h"
 #include "KeyRemapper.h"
 #include "VibrationMotor.h"
 
@@ -17,6 +18,8 @@
  *   POST /keymap.json                      replace the rules
  *   GET  /learn?on=1                       bypass the rules while capturing keys
  *   GET  /restart                          reboot the board, which reopens the OTA window
+ *   GET  /config.json                      the stored settings (currently the idle timeout)
+ *   POST /config.json                      replace a setting, e.g. {"idleTimeoutMin":20}
  *   GET  /                                 short usage text
  */
 class HttpApi {
@@ -29,8 +32,9 @@ public:
      * @param port TCP port to listen on.
      * @param motor Motor driver the endpoints control.
      * @param remapper Key remapper the editor endpoints configure.
+     * @param settings Device settings the config endpoints read and write.
      */
-    HttpApi(uint16_t port, VibrationMotor& motor, KeyRemapper& remapper);
+    HttpApi(uint16_t port, VibrationMotor& motor, KeyRemapper& remapper, DeviceSettings& settings);
 
     /**
      * Register the request handlers. The socket is opened later, once WiFi is connected.
@@ -120,9 +124,24 @@ private:
      */
     void handleRestart();
 
+    /**
+     * Handle GET /config.json.
+     *
+     * @return void
+     */
+    void handleConfigGet();
+
+    /**
+     * Handle POST /config.json.
+     *
+     * @return void
+     */
+    void handleConfigPost();
+
     WebServer _server;
     VibrationMotor& _motor;
     KeyRemapper& _remapper;
+    DeviceSettings& _settings;
     ActivityHandler _activityHandler;
     bool _started = false;
 };

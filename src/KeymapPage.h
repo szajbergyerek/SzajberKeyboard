@@ -48,6 +48,13 @@ details[open] summary{margin-bottom:8px}
 <div class="c">
 <h1>Szájber Keyboard</h1>
 <div class="p">
+<div class="lbl">Beállítások</div>
+<p class="note" style="margin:0 0 8px">Kikapcsolási idő (perc): hány perc tétlenség után kapcsoljon ki a billentyűzet.</p>
+<input class="inp" id="to" type="number" min="1" max="180" step="1" inputmode="numeric" style="margin-bottom:10px">
+<button class="pri" id="tb">Mentés</button>
+<div class="st" id="tmsg" style="margin-top:8px">Betöltés...</div>
+</div>
+<div class="p">
 <div class="fl"><button id="lb">Tanuló mód</button><span class="st" id="ls">Állapot...</span></div>
 <p class="note" style="margin:8px 0 0">A lap bezárása után legkésőbb 2 perccel magától kikapcsol.</p>
 </div>
@@ -191,6 +198,17 @@ fetch("/keymap.json").then(function(r){return r.json();})
 .catch(function(){draw();say("A szabályok betöltése nem sikerült.");});
 sl(true);
 window.addEventListener("beforeunload",function(){fetch("/learn?on=0",{keepalive:true});});
+function toSay(s){E("tmsg").textContent=s;}
+fetch("/config.json").then(function(r){return r.json();})
+.then(function(j){var v=+j.idleTimeoutMin;E("to").value=(v>=1&&v<=180)?v:"";toSay("Betöltve.");})
+.catch(function(){toSay("A beállítás betöltése nem sikerült.");});
+E("tb").onclick=function(){var v=E("to").value,n=+v;
+if(v===""||!/^[0-9]+$/.test(v)||n<1||n>180){toSay("Az érték 1 és 180 közötti egész szám legyen.");return;}
+toSay("Mentés...");
+fetch("/config.json",{method:"POST",headers:{"Content-Type":"application/json"},
+body:JSON.stringify({idleTimeoutMin:n})}).then(function(r){return r.json();})
+.then(function(j){toSay(j.ok?"Mentve, "+j.idleTimeoutMin+" perc.":"Mentés sikertelen: "+(j.error||"ismeretlen hiba"));})
+.catch(function(){toSay("Mentés sikertelen: nincs kapcsolat a billentyűzettel.");});};
 </script>
 </body>
 </html>)HTML";
